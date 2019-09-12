@@ -275,6 +275,14 @@ namespace SilkService
         public YSContext YaraContext;
         public YSCompiler YaraCompiler;
         public YSRules YaraRules;
+        public Dictionary<ushort, EventTarget> Twists;
+    }
+
+    public struct EventTarget
+    {
+        public ushort EventID;
+        public string EventLogSource;
+        public string EventLogChannel;
     }
 
     // Bookkeeper struct for service cleanup

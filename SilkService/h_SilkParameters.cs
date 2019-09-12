@@ -38,9 +38,10 @@ namespace SilkService
             XName FV = XName.Get("FilterValue");
             XName YS = XName.Get("YaraScan");
             XName YO = XName.Get("YaraOptions");
-
-            // Initialize result struct
-            var CollectorParamInstance = new CollectorParameters();
+            XName TW = XName.Get("Twist");
+            XName SEID = XName.Get("SourceEventID");
+            XName TEID = XName.Get("TargetEventID");
+            XName TECN = XName.Get("TargetPath");
 
             // Loop ETWCollector elements
             try
@@ -48,6 +49,9 @@ namespace SilkService
                 foreach (XElement Collector in XmlConfigFile.Elements(CI))
                 {
                     XElement ParamContainer;
+
+                    // Initialize result struct
+                    var CollectorParamInstance = new CollectorParameters();
 
                     // Loop all possible params
                     try // (1) --> CollectorGUID, ID of the the collector instance for internal tracking
@@ -248,6 +252,43 @@ namespace SilkService
                     catch
                     {
                         CollectorParamInstance.YaraOptions = YaraOptions.None;
+                    }
+                    try // (13) --> Twist
+                    {
+                        var twists = Collector.Elements(TW);
+                        SilkUtility.WriteToServiceTextLog("Got Twists");
+                        foreach (var twist in twists)
+                        {
+                            ushort source;
+                            EventTarget target = new EventTarget();
+
+                            ParamContainer = twist.Element(SEID);
+                            if (ParamContainer?.Value == null || !ushort.TryParse(ParamContainer.Value, out source))
+                            {
+                                throw new Exception($"Failed to parse Twist Source ID");
+                            }
+
+                            ParamContainer = twist.Element(TEID);
+                            if (ParamContainer?.Value == null || !ushort.TryParse(ParamContainer.Value, out target.EventID))
+                            {
+                                throw new Exception($"Failed to parse Twist Target ID");
+                            }
+
+                            ParamContainer = twist.Element(TECN);
+                            if (ParamContainer?.Value == null || string.IsNullOrEmpty(ParamContainer.Value))
+                            {
+                                throw new Exception($"Failed to parse Twist Target Event Log Channel");
+                            }
+
+                            target.EventLogChannel = ParamContainer.Value;
+                            if (CollectorParamInstance.Twists == null)
+                                CollectorParamInstance.Twists = new Dictionary<ushort, EventTarget>();
+                            CollectorParamInstance.Twists.Add(source, target);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        SilkUtility.WriteToServiceTextLog($"[!] Parsing error encountered while processing a Twist config: {e}");
                     }
 
                     // Add result to ouput object
